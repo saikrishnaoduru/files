@@ -1,0 +1,52 @@
+node {
+    
+    stage("Git Clone"){
+
+        git credentialsId: 'GIT_HUB_CREDENTIALS', url: 'https://github.com/saikrishnaoduru/jenkinstest.git'
+    }
+    
+    stage("Maven Clean Package") {
+        def mvnHome = tool 'maven3'
+        sh "${mvnHome}/bin/mvn clean install package"
+    
+    }
+    stage("Docker build"){
+        sh 'docker version'
+        sh 'cd /var/lib/jenkins/workspace/maven'
+        sh 'docker-compose up -d'
+        sh 'docker image list'
+        sh 'docker tag maven-email-service saikrishnaoduru/yogendar:email-service'
+        sh 'docker tag maven-api-gateway saikrishnaoduru/yogendar:api-gateway'
+        sh 'docker tag maven-authentication-service saikrishnaoduru/yogendar:authentication-service'
+        sh 'docker tag maven-eureka-server saikrishnaoduru/yogendar:eureka-server'
+        sh 'docker tag maven-vaccination-center-service saikrishnaoduru/yogendar:vaccination-center-service'
+        sh 'docker tag maven-config-server saikrishnaoduru/yogendar:maven-config-server'
+        sh 'docker tag maven-slot-booking-service saikrishnaoduru/yogendar:slot-booking-service'
+        sh 'docker tag maven-user-service saikrishnaoduru/yogendar:user-service'
+        sh 'docker tag maven-product-webapp saikrishnaoduru/yogendar:product-webapp'
+        sh 'docker tag mysql saikrishnaoduru/yogendar:mysql'
+        sh 'docker tag rabbitmq:3-management saikrishnaoduru/yogendar:rabbitmq'
+        sh 'docker tag mongo saikrishnaoduru/yogendar:mongo'
+        
+    } 
+    stage("Docker Login"){
+        withCredentials([string(credentialsId: 'DOCKER_HUB_PASSWORDD', variable: 'PASSWORD')]) {
+            sh 'docker login -u saikrishnaoduru -p $PASSWORD'
+        }
+    }
+    stage("Push Image to Docker Hub"){
+        sh 'docker push  saikrishnaoduru/yogendar:email-service'
+        sh 'docker push  saikrishnaoduru/yogendar:api-gateway'
+        sh 'docker push  saikrishnaoduru/yogendar:authentication-service'
+        sh 'docker push  saikrishnaoduru/yogendar:eureka-server'
+        sh 'docker push  saikrishnaoduru/yogendar:vaccination-center-service'
+        sh 'docker push  saikrishnaoduru/yogendar:maven-config-server'
+        sh 'docker push  saikrishnaoduru/yogendar:slot-booking-service'
+        sh 'docker push  saikrishnaoduru/yogendar:user-service'
+        sh 'docker push  saikrishnaoduru/yogendar:product-webapp'
+        sh 'docker push  saikrishnaoduru/yogendar:mysql'
+        sh 'docker push  saikrishnaoduru/yogendar:rabbitmq'
+        sh 'docker push  saikrishnaoduru/yogendar:mongo'
+    }
+    
+}
