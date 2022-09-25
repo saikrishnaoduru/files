@@ -84,7 +84,17 @@ node(label:'stagging') {
           sshCommand remote: remote, command: "kubectl apply -f vaccination-center-service.yml"
           sshCommand remote: remote, command: "kubectl apply -f rabbitmq.yml"
            }
-
+        stage("SonarQube Report") {
+        def scannerHome = tool 'sonarqube'
+        withSonarQubeEnv('sonarqube') {
+           sh "${scannerHome}/bin/sonar-scanner \
+           -D sonar.login=admin \
+           -D sonar.password=admin \
+           -D sonar.projectKey=sonarqubetest \
+           -D sonar.exclusions=vender/**,resources/**,**/*.java \
+           -D sonar.host.url=http://34.192.140.4:9000/"
+           }
+             
     
     }    
 }    
