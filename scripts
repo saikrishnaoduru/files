@@ -1,7 +1,7 @@
 node(label:'stagging') { 
     
     stage("Git Clone"){    
-        git credentialsId: 'GIT_HUB_CREDENTIALS', url: 'https://github.com/saikrishnaoduru/testsptest.git'
+        git credentialsId: 'GIT_HUB_CREDENTIALS', url: 'https://github.com/saikrishnaoduru/testyourproject.git'
     }   
     
     stage("Maven Clean Package") {
