@@ -1,0 +1,129 @@
+node(label:'stagging') { 
+    
+    stage("Git Clone"){    
+        git credentialsId: 'GIT_HUB_CREDENTIALS', url: 'https://github.com/saikrishnaoduru/testyourproject.git'
+    }   
+    
+    stage("Maven Clean Package") {
+        def mvnHome = tool 'maven3'
+        sh "${mvnHome}/bin/mvn clean install package"   
+        }
+        
+        
+        
+     stage("Docker build"){
+        sh 'docker version'
+        sh 'cd /home/ec2-user/jenkins/workspace/maven'
+        sh 'docker-compose up -d'
+        sh 'docker image list'
+        sh 'docker tag maven-email-service saikrishnaoduru/yogendarr:email-service'
+        sh 'docker tag maven-api-gateway saikrishnaoduru/yogendarr:api-gateway'
+        sh 'docker tag maven-authentication-service saikrishnaoduru/yogendarr:authentication-service'
+        sh 'docker tag maven-eureka-server saikrishnaoduru/yogendarr:eureka-server'
+        sh 'docker tag maven-vaccination-center-service saikrishnaoduru/yogendarr:vaccination-center-service'
+        sh 'docker tag maven-config-server saikrishnaoduru/yogendarr:maven-config-server'
+        sh 'docker tag maven-slot-booking-service saikrishnaoduru/yogendarr:slot-booking-service'
+        sh 'docker tag maven-user-service saikrishnaoduru/yogendarr:user-service'
+        sh 'docker tag maven-product-webapp saikrishnaoduru/yogendarr:product-webapp'
+        sh 'docker tag mysql saikrishnaoduru/yogendarr:mysql'
+        sh 'docker tag rabbitmq:3-management saikrishnaoduru/yogendarr:rabbitmq'
+        sh 'docker tag mongo saikrishnaoduru/yogendarr:mongo'   
+    }
+    stage("Docker Login") {
+        withCredentials([string(credentialsId: 'DOCKER_HUB_PASSWORDD', variable: 'PASSWORD')]) {
+            sh 'docker login -u saikrishnaoduru -p $PASSWORD'
+        }
+        }
+    stage("Push Image to Docker Hub"){
+        sh 'docker push  saikrishnaoduru/yogendarr:email-service'
+        sh 'docker push  saikrishnaoduru/yogendarr:api-gateway'
+        sh 'docker push  saikrishnaoduru/yogendarr:authentication-service'
+        sh 'docker push  saikrishnaoduru/yogendarr:eureka-server'
+        sh 'docker push  saikrishnaoduru/yogendarr:vaccination-center-service'
+        sh 'docker push  saikrishnaoduru/yogendarr:maven-config-server'
+        sh 'docker push  saikrishnaoduru/yogendarr:slot-booking-service'
+        sh 'docker push  saikrishnaoduru/yogendarr:user-service'
+        sh 'docker push  saikrishnaoduru/yogendarr:product-webapp'
+        sh 'docker push  saikrishnaoduru/yogendarr:mysql'
+        sh 'docker push  saikrishnaoduru/yogendarr:rabbitmq'
+        sh 'docker push  saikrishnaoduru/yogendarr:mongo'
+    }
+    stage("SonarQube Report") {
+        def scannerHome = tool 'sonarqube'
+        withSonarQubeEnv('sonarqube') {
+           sh "${scannerHome}/bin/sonar-scanner \
+           -D sonar.login=admin \
+           -D sonar.password=admin \
+           -D sonar.projectKey=sonarqubetest \
+           -D sonar.exclusions=vender/**,resources/**,**/*.java \
+           -D sonar.host.url=http://34.192.140.4:9000/"
+           }
+        }
+        
+     stage("SSH Into k8s Server") {
+        def remote = [:]
+        remote.name = 'K8S-master'
+        remote.host = '172.31.95.227'
+        remote.user = 'root'
+        remote.password = 'root'
+        remote.allowAnyHosts = true
+        
+    stage('Put k8s.yml onto k8smaster') {
+            sshPut remote: remote, from: 'config-server.yml', into: '.'
+            sshPut remote: remote, from: 'eureka-server.yml', into: '.'
+            sshPut remote: remote, from: 'api-gateway.yml', into: '.'
+            sshPut remote: remote, from: 'mysql.yml', into: '.'
+            sshPut remote: remote, from: 'mongodb.yml', into: '.'
+            sshPut remote: remote, from: 'user-server.yml', into: '.'
+            sshPut remote: remote, from: 'slot-booking-service.yml', into: '.'
+            sshPut remote: remote, from: 'email-server.yml', into: '.'
+            sshPut remote: remote, from: 'authentication-server.yml', into: '.'
+            sshPut remote: remote, from: 'product-webapp.yml', into: '.'
+            sshPut remote: remote, from: 'vaccination-center-service.yml', into: '.'
+            sshPut remote: remote, from: 'rabbitmq.yml', into: '.'
+            
+    }
+    stage('Deploy spring boot') {
+          sshCommand remote: remote, command: "kubectl apply -f config-server.yml"
+          sshCommand remote: remote, command: "kubectl apply -f eureka-server.yml"
+          sshCommand remote: remote, command: "kubectl apply -f api-gateway.yml"
+          sshCommand remote: remote, command: "kubectl apply -f mysql.yml"
+          sshCommand remote: remote, command: "kubectl apply -f mongodb.yml"
+          sshCommand remote: remote, command: "kubectl apply -f user-server.yml"
+          sshCommand remote: remote, command: "kubectl apply -f slot-booking-service.yml"
+          sshCommand remote: remote, command: "kubectl apply -f email-server.yml"
+          sshCommand remote: remote, command: "kubectl apply -f authentication-server.yml"
+          sshCommand remote: remote, command: "kubectl apply -f product-webapp.yml"
+          sshCommand remote: remote, command: "kubectl apply -f vaccination-center-service.yml"
+          sshCommand remote: remote, command: "kubectl apply -f rabbitmq.yml"
+     }
+     
+     } 
+}
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
